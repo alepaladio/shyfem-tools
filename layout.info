@@ -1,0 +1,41 @@
+shyfem-tools/
+├── shyfem/                     # Main package directory
+│   ├── __init__.py             # Package initialization
+│   ├── io/                     # Input/output operations
+│   │   ├── __init__.py
+│   │   ├── nc_reader.py        # NetCDF file reader
+│   │   ├── shy_reader.py       # SHY file reader
+│   │   └── converters.py       # SHY to NetCDF converters
+│   ├── plot/                   # Visualization tools
+│   │   ├── __init__.py
+│   │   ├── map_plots.py        # 2D-H (map) plots
+│   │   ├── profile_plots.py    # 2D-V (river profile) plots
+│   │   └── timeseries.py       # Time series plots
+│   ├── utils/                  # Utility functions
+│   │   ├── __init__.py
+│   │   ├── geometry.py         # Geometry handling
+│   │   └── time_utils.py       # Time handling
+│   └── model/                  # Model-specific functions
+│       ├── __init__.py
+│       ├── hydrodynamics.py    # Water level, velocity processing
+│       └── tracers.py          # Salinity, temperature processing
+├── scripts/                    # Standalone scripts
+│   ├── shy2nc.py               # Conversion script
+│   ├── plot_hydro.py           # Hydro plots example
+│   └── plot_tracers.py         # Tracer plots example
+├── tests/                      # Unit tests
+│   ├── __init__.py
+│   ├── test_nc_reader.py
+│   └── test_shy_reader.py
+├── examples/                   # Example notebooks/scripts
+│   ├── basic_usage.ipynb
+│   └── advanced_plots.ipynb
+├── docs/                       # Documentation
+│   ├── conf.py
+│   ├── index.rst
+│   └── ...                     # Other documentation files
+├── LICENSE                     # License file
+├── README.md                   # Project description
+├── requirements.txt            # Dependencies
+├── setup.py                    # Installation script
+└── pyproject.toml              # Modern Python project config
