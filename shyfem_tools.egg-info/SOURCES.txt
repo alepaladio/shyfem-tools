@@ -1,0 +1,14 @@
+setup.py
+plot/__init__.py
+shyfem/__init__.py
+shyfem/io/__init__.py
+shyfem/io/example_extraction.py
+shyfem/io/example_usage.py
+shyfem/io/nc_node_extractor.py
+shyfem/io/old_nc_node_extractor.py
+shyfem_tools.egg-info/PKG-INFO
+shyfem_tools.egg-info/SOURCES.txt
+shyfem_tools.egg-info/dependency_links.txt
+shyfem_tools.egg-info/requires.txt
+shyfem_tools.egg-info/top_level.txt
+utils/__init__.py
