@@ -1,22 +1,12 @@
 """
-Input/Output operations for SHYFEM data formats
-
-Contains:
-- NetCDF file readers
-- SHY file readers
-- Format converters
+I/O operations for SHYFEM files
 """
 
-from .nc_reader import read_nc, get_nc_variables
-from .nc_node_extractor import SHYFEMNodeExtractor
-from .shy_reader import read_shy_file
-from .converters import shy_to_nc, nc_to_shy
+# Import everything from your modules
+from .nc_node_extractor import SHYFEMNodeExtractor, extract_river_transect
 
+# List what's available in this submodule
 __all__ = [
-    'read_nc',
-    'get_nc_variables',
     'SHYFEMNodeExtractor',
-    'read_shy_file',
-    'shy_to_nc',
-    'nc_to_shy'
+    'extract_river_transect',
 ]
