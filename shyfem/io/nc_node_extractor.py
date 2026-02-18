@@ -121,9 +121,9 @@ class SHYFEMNodeExtractor:
         return self.river_data
     
     def _sort_river_nodes(self, river_df: pd.DataFrame, 
-                         sort_direction: str = 'longitude') -> pd.DataFrame:
+                     sort_direction: str = 'longitude') -> pd.DataFrame:
         """
-        Sort river nodes along a specified direction and calculate distances.
+        Sort river nodes along a river path using distance-based reordering.
         
         Parameters
         ----------
@@ -142,28 +142,79 @@ class SHYFEMNodeExtractor:
         if not all(col in river_df.columns for col in required_cols):
             raise ValueError(f"River data must contain: {required_cols}")
         
-        # Sort by specified direction
-        if sort_direction not in ['longitude', 'latitude']:
-            raise ValueError("sort_direction must be 'longitude' or 'latitude'")
+        # Convert sort_direction string to original integer format
+        sort_LonLat = 0 if sort_direction == 'longitude' else 1
         
-        sorted_df = river_df.sort_values(by=sort_direction).reset_index(drop=True)
+        # Make a copy to avoid modifying original
+        river_sorted = river_df.copy()
         
-        # Calculate cumulative distance along the river
-        latitudes = sorted_df['latitude'].values
-        longitudes = sorted_df['longitude'].values
+        # Initial sort by specified direction
+        if sort_LonLat == 0:
+            river_sorted = river_sorted.sort_values(by='longitude')
+        else:
+            river_sorted = river_sorted.sort_values(by='latitude')
         
-        distances = [0.0]  # Start with 0 for first point
-        for i in range(len(latitudes) - 1):
-            p1 = (latitudes[i], longitudes[i])
-            p2 = (latitudes[i + 1], longitudes[i + 1])
-            dist = geodesic(p1, p2).meters
+        # Extract arrays
+        river_x = river_sorted['latitude'].values   # Lat values
+        river_y = river_sorted['longitude'].values  # Lon values
+        
+        # Get node IDs if they exist, otherwise use index
+        if 'node_id' in river_sorted.columns:
+            river_n = river_sorted['node_id'].values
+        elif 'Node' in river_sorted.columns:
+            river_n = river_sorted['Node'].values
+        else:
+            river_n = river_sorted.index.values
+        
+        # Reorder nodes based on distance
+        for ii in range(len(river_n) - 1):
+            c_x1, c_y1 = river_x[ii], river_y[ii]
+            
+            # Calculate distance to next point
+            c_x2, c_y2 = river_x[ii + 1], river_y[ii + 1]
+            c_d = geodesic((c_x1, c_y1), (c_x2, c_y2)).meters
+            
+            if c_d >= 50:  # Large gap detected
+                # Find a closer point
+                c_check_d = []
+                for jj in range(ii, len(river_n) - 1):
+                    c_check_x, c_check_y = river_x[jj + 1], river_y[jj + 1]
+                    dist = geodesic((c_x1, c_y1), (c_check_x, c_check_y)).meters
+                    c_check_d.append(dist)
+                    
+                    if dist < 100:
+                        # Swap nodes
+                        river_n[ii + 1], river_n[jj + 1] = river_n[jj + 1], river_n[ii + 1]
+                        river_x[ii + 1], river_x[jj + 1] = river_x[jj + 1], river_x[ii + 1]
+                        river_y[ii + 1], river_y[jj + 1] = river_y[jj + 1], river_y[ii + 1]
+                        break
+                else:
+                    # If no close node found, use closest one
+                    c_check_d = [dist if dist != 0 else max(c_check_d) + 1 for dist in c_check_d]
+                    min_idx = c_check_d.index(min(c_check_d))
+                    river_n[ii + 1], river_n[min_idx + ii + 1] = river_n[min_idx + ii + 1], river_n[ii + 1]
+                    river_x[ii + 1], river_x[min_idx + ii + 1] = river_x[min_idx + ii + 1], river_x[ii + 1]
+                    river_y[ii + 1], river_y[min_idx + ii + 1] = river_y[min_idx + ii + 1], river_y[ii + 1]
+        
+        # Calculate cumulative distance
+        distances = [0.0]
+        for i in range(len(river_n) - 1):
+            dist = geodesic((river_x[i], river_y[i]), 
+                           (river_x[i + 1], river_y[i + 1])).meters
             distances.append(dist)
         
-        # Add cumulative distance
-        sorted_df = sorted_df.copy()
-        sorted_df['distance'] = np.cumsum(distances)
+        # Create result DataFrame
+        result_df = pd.DataFrame({
+            'latitude': river_x,
+            'longitude': river_y,
+            'distance': np.cumsum(distances)
+        })
         
-        return sorted_df
+        # Add node IDs if available
+        if 'node_id' in river_sorted.columns or 'Node' in river_sorted.columns:
+            result_df['node_id'] = river_n[:,0]
+        
+        return result_df
     
     def find_nearest_nodes(self, points: Union[List[Tuple[float, float]], pd.DataFrame], 
                           return_indices: bool = True) -> Union[np.ndarray, pd.DataFrame]:
@@ -222,7 +273,8 @@ class SHYFEMNodeExtractor:
                      sort_direction: str = 'longitude',
                      time_slice: Optional[slice] = None,
                      save_frequency: int = 1,
-                     variables: Optional[List[str]] = None) -> str:
+                     variables: Optional[List[str]] = None,
+                     nc_file_varid: str = None) -> str:
         """
         Extract nodes along a river and create subset NetCDF file.
         
@@ -238,6 +290,8 @@ class SHYFEMNodeExtractor:
             Save every nth time step
         variables : list of str, optional
             Specific variables to extract. If None, extract all data variables.
+        nc_file_varid : str, optional
+            Variable identifier for output filename
         
         Returns
         -------
@@ -251,7 +305,8 @@ class SHYFEMNodeExtractor:
         sorted_river = self._sort_river_nodes(river_df, sort_direction)
         
         # Find nearest model nodes
-        node_indices = self.find_nearest_nodes(sorted_river)
+        node_indices_df = self.find_nearest_nodes(sorted_river, return_indices=False)
+        node_indices = node_indices_df['node_index'].values
         
         # Load dataset
         self._load_dataset()
@@ -267,20 +322,79 @@ class SHYFEMNodeExtractor:
             ds_subset = ds_subset.isel(time=slice(None, None, save_frequency))
         
         # Select specific nodes
-        # ds_subset = ds_subset.isel(node=node_indices)
         ds_subset = ds_subset.isel(nMesh2_node=node_indices)
+        
+        # --- ADD COORDINATES BACK WITH STANDARD NAMES ---
+        # Add longitude and latitude with standard names
+        ds_subset['longitude'] = xr.DataArray(
+            self.ds['Mesh2_node_x'].values[node_indices],
+            dims=['nMesh2_node'],
+            attrs={
+                'units': 'degrees_east',
+                'long_name': 'longitude',
+                'standard_name': 'longitude'
+            }
+        )
+        
+        ds_subset['latitude'] = xr.DataArray(
+            self.ds['Mesh2_node_y'].values[node_indices],
+            dims=['nMesh2_node'],
+            attrs={
+                'units': 'degrees_north',
+                'long_name': 'latitude',
+                'standard_name': 'latitude'
+            }
+        )
+        
+        # Add total_depth if it exists in original dataset
+        if 'total_depth' in self.ds.variables:
+            ds_subset['total_depth'] = xr.DataArray(
+                self.ds['total_depth'].values[node_indices],
+                dims=['nMesh2_node'],
+                attrs={
+                    'units': 'meters',
+                    'long_name': 'total water depth',
+                    'standard_name': 'sea_floor_depth_below_geoid'
+                }
+            )
+        
+        # Add level (vertical coordinate) - MATCH ORIGINAL NAME
+        if 'depth' in self.ds.variables:
+            ds_subset['depth'] = xr.DataArray(
+                self.ds['depth'].values,  # No node_indices indexing!
+                dims=['depth'],           # Dimension name is 'level'
+                attrs={
+                    'units': 'meters',
+                    'long_name': 'depth',
+                    'standard_name': 'depth',
+                    'positive': 'down',
+                    'axis': 'Z'
+                }
+            )
+        
+        # Set coordinates properly
+        ds_subset = ds_subset.set_coords(['longitude', 'latitude'])
+        if 'total_depth' in ds_subset.variables:
+            ds_subset = ds_subset.set_coords(['total_depth'])
+        if 'level' in ds_subset.variables:
+            ds_subset = ds_subset.set_coords(['level'])
+        
+        # Remove the original Mesh2_node_x/y if they exist
+        if 'Mesh2_node_x' in ds_subset.variables:
+            ds_subset = ds_subset.drop_vars(['Mesh2_node_x', 'Mesh2_node_y'], errors='ignore')
+        # --- END COORDINATE ADDITION ---
         
         # Select specific variables if requested
         if variables is not None:
             # Always keep coordinates
             coord_vars = list(ds_subset.coords)
             ds_subset = ds_subset[variables + coord_vars]
-        
+            
         # Add river metadata as attributes
-        ds_subset.attrs['river_nodes_original'] = str(river_df.to_dict())
-        ds_subset.attrs['river_nodes_sorted'] = str(sorted_river.to_dict())
-        ds_subset.attrs['sort_direction'] = sort_direction
-        ds_subset.attrs['node_indices'] = str(node_indices.tolist())
+        # ds_subset.attrs['river_nodes_original'] = str(river_df.to_dict())
+        # ds_subset.attrs['river_nodes_sorted'] = str(sorted_river.to_dict())
+        # ds_subset.attrs['sort_direction'] = sort_direction
+        # ds_subset.attrs['node_indices'] = str(node_indices.tolist())
         
         # Determine output filename
         if output_prefix is None:
@@ -288,9 +402,11 @@ class SHYFEMNodeExtractor:
             river_name = os.path.splitext(os.path.basename(self.river_file))[0]
             output_prefix = f"{base_name}_{river_name}"
         
+        # Handle nc_file_varid for filename
+        varid_suffix = f"_{nc_file_varid}" if nc_file_varid else ""
         output_file = os.path.join(
             self.output_dir,
-            f"{output_prefix}_extracted.nc"
+            f"{output_prefix}{varid_suffix}_extracted.nc"
         )
         
         # Save to NetCDF
@@ -315,15 +431,17 @@ class SHYFEMNodeExtractor:
             Encoding settings
         """
         encoding = {}
-        
+
         for var_name in ds.variables:
             var = ds[var_name]
             
             # Set appropriate data types
             if var_name in ['longitude', 'latitude', 'time']:
                 encoding[var_name] = {'dtype': 'float64'}
+            elif var_name in ['depth']:  # Changed from 'depth'
+                encoding[var_name] = {'dtype': 'float32'}
             elif var_name in ['water_level', 'u_velocity', 'v_velocity', 
-                            'salinity', 'temperature']:
+                            'salinity', 'temperature', 'total_depth']:
                 encoding[var_name] = {
                     'dtype': 'float32',
                     '_FillValue': None,

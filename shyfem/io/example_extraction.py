@@ -2,6 +2,7 @@
 Example usage of SHYFEMNodeExtractor with xarray
 """
 
+import os
 from shyfem.io.nc_node_extractor import SHYFEMNodeExtractor, extract_river_transect
 import xarray as xr
 import matplotlib.pyplot as plt
@@ -11,19 +12,47 @@ def example_basic():
     """Basic example of extracting river nodes."""
     
     # Initialize extractor
+    # extractor = SHYFEMNodeExtractor(
+    #     nc_file="/home/utente/Documenti/climaxpo/po-er_hindcast_202207/po-er_hindcast/sims/202207/deltapo_ER_202207_ogridNoDRCVmin_WATEXT_ts_uns.nc",
+    #     river_file="/home/utente/Documenti/climaxpo/qgis/river_branches/nodes_PoDiVeneziaF.csv",
+    #     output_dir="/home/utente/Documenti/climaxpo/climaxpo_2022-2023/test_results"
+    # )
+    # Select NC file to extract data from 
+    main_folder = '/home/utente/Documenti/climaxpo/po-er_hindcast_202207/po-er_hindcast/sims/202207'
+    # varid = 'ts' # ts or hydro
+    varid = 'hydro' # ts or hydro
+    sim_name = 'deltapo_ER_202207_ogridNoDRCVmin'
+    # sim_name = 'deltapo_ER_202207_ogridNoDRCVmin_WATEXT_f'
+    filename = f'{sim_name}_{varid}_20220715-20220725.nc'
+    output_folder = f'{main_folder}/NC_out/{sim_name}'
+    os.makedirs(output_folder, exist_ok=True)
+    # deltapo_ER_202207_ogridNoDRCVmin_ts_20220715-20220725.nc
+    # deltapo_ER_202207_ogridNoDRCVmin_hydro_20220715-20220725.nc
+    
+    # River to extract
+    riverid = 'PoDiVenezia'
+    # riverid = 'PoDiGoro'
     extractor = SHYFEMNodeExtractor(
-        nc_file="/home/utente/Documenti/climaxpo/po-er_hindcast_202207/po-er_hindcast/sims/202207/deltapo_ER_202207_ogridNoDRCVmin_WATEXT_ts_uns.nc",
-        river_file="/home/utente/Documenti/climaxpo/qgis/river_branches/nodes_PoDiVeneziaF.csv",
-        output_dir="/home/utente/Documenti/climaxpo/climaxpo_2022-2023/test_results"
+        nc_file=f"{main_folder}/{filename}",
+        river_file=f"/home/utente/Documenti/climaxpo/qgis/river_branches/nodes_{riverid}F.csv",
+        output_dir=f"{output_folder}"
     )
     
     # Extract nodes along river (west-east sorting)
+    if varid == "ts":
+        variables = ["salinity", "temperature"]
+    else:
+        variables = ["water_level", "u_velocity", "v_velocity"]
+    
     output_file = extractor.extract_nodes(
-        output_prefix="Po_di_Venezia",
-        sort_direction="longitude",  # or "latitude"
-        save_frequency=2,  # Save every 2nd time step
-        variables=['salinity', 'temperature']  # Optional: select specific variables
+        output_prefix=f"{riverid}",
+        sort_direction="longitude",
+        save_frequency=1,
+        variables=variables,
+        nc_file_varid=varid
     )
+    # variables=['salinity', 'temperature']  # Optional: select specific variables
+    # variables=['water_level', 'zeta', 'u_velocity', 'v_velocity']
     
     # Load and inspect the extracted data
     ds_extracted = xr.open_dataset(output_file)
@@ -170,7 +199,7 @@ def example_interactive():
 if __name__ == "__main__":
     # Run examples
     print("Example 1: Basic extraction")
-    # ds1 = example_basic()
+    ds1 = example_basic()
     
     print("\nExample 2: Convenience function")
     output_file = example_convenience()
