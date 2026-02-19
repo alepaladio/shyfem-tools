@@ -8,6 +8,7 @@ import pandas as pd
 import imageio.v2 as imageio
 from datetime import datetime
 from typing import List, Optional
+import matplotlib.pyplot as plt
 
 def save_figure(fig, folder: str, filename: str, dpi: int = 100, close: bool = True) -> str:
     """

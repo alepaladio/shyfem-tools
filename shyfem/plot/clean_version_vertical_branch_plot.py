@@ -233,7 +233,7 @@ models = '/home/utente/Documenti/climaxpo/po-er_hindcast_202207/po-er_hindcast/s
 sims_name = os.path.basename(models)
 # Check if hydro, ts or measurements will be plotted, and if video will be save
 # There will be 2 plots based in the inputs from here, if hydro=1 there will be currents and water levels, if ts=1 there will be salinity and temperature
-hydro = 0
+hydro = 1
 ts = 1 
 measurements = 0
 make_video = 1

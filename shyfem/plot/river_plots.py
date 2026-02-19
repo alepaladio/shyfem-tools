@@ -12,6 +12,8 @@ from typing import Optional, Tuple, List, Union
 from dataclasses import dataclass
 import cmocean.cm as cmo
 import os
+import numpy as np
+from dataclasses import dataclass, field
 
 from ..io.nc_node_extractor import SHYFEMNodeExtractor
 from .utils import haversine, save_figure, create_video
@@ -32,20 +34,28 @@ class RiverPlotConfig:
     max_discharge_lim: float = 750
     
     # Time settings
-    time_units: str = 'hours since 2022-07-15 00:00:00'
+    time_units: str = 'hours since 2022-07-15 00:00:00'  # Can be changed per file
     time_calendar: str = 'standard'
     date_range: Optional[Tuple[str, str]] = None  # e.g., ("2022-07-01", "2022-09-01")
     
-    # Contour levels
-    salinity_levels: np.ndarray = np.array([0, 2, 5, 10, 15, 20, 25, 30, 35, 40])
-    temperature_levels: np.ndarray = np.array([16, 18, 20, 22, 24, 26, 28, 30, 32])
+    # Contour levels - FIXED with default_factory
+    salinity_levels: np.ndarray = field(
+        default_factory=lambda: np.array([0, 2, 5, 10, 15, 20, 25, 30, 35, 40])
+    )
+    temperature_levels: np.ndarray = field(
+        default_factory=lambda: np.array([16, 18, 20, 22, 24, 26, 28, 30, 32])
+    )
     
     # Output settings
     output_folder: Optional[str] = None
     fps: int = 4
     dpi: int = 100
-
-
+    
+    def __post_init__(self):
+        """Validate settings after initialization."""
+        # You can add validation here if needed
+        pass
+    
 class RiverTransectPlotter:
     """Plotter for river transect data."""
     
@@ -271,6 +281,7 @@ class RiverTransectPlotter:
                 c_uv[c_uv == 0] = np.nan
                 c_vv[c_vv == 0] = np.nan
                 c_m = np.sqrt(c_uv**2 + c_vv**2)
+                c_wl = np.flipud(self.hydro_data['water_level'][ii,:])
             
             if self.config.plot_ts:
                 c_sal = np.transpose(self.ts_data['salinity'][ii, :, :])
@@ -291,7 +302,7 @@ class RiverTransectPlotter:
                 Y1 = self.ts_data['Y'][:, :] + 0.25
             
             # Create figure
-            fig = self._create_figure(c_t, c_sal, c_tem, c_uv, c_vv, c_m,
+            fig = self._create_figure(c_t, c_sal, c_tem, c_uv, c_vv, c_m, c_wl,
                                      Y1, X_length, col_X, discharge_index,
                                      start_date, end_date)
             
@@ -310,7 +321,7 @@ class RiverTransectPlotter:
         if self.config.make_video:
             self._create_video(output_folder, river_branch)
     
-    def _create_figure(self, c_t, c_sal, c_tem, c_uv, c_vv, c_m,
+    def _create_figure(self, c_t, c_sal, c_tem, c_uv, c_vv, c_m, c_wl,
                        Y1, X_length, col_X, discharge_index,
                        start_date, end_date):
         """Create the figure with appropriate subplots based on configuration."""
@@ -410,19 +421,17 @@ class RiverTransectPlotter:
                        levels=self.config.temperature_levels, linewidths=2)
             
             # Plot water level
-            ax1.plot(self.hydro_data['X'][0, :], self.hydro_data['water_level'][:, -1],
-                    'k', linewidth=4)
-            ax2.plot(self.hydro_data['X'][0, :], self.hydro_data['water_level'][:, -1],
-                    'k', linewidth=4)
+            ax1.plot(self.hydro_data['X'][0, :], c_wl,'k', linewidth=4)
+            ax2.plot(self.hydro_data['X'][0, :], c_wl,'k', linewidth=4)
             
             # Plot bathymetry
             td = self.hydro_data['total_depth']
-            ax1.fill_between(self.hydro_data['X'][0, :], -td,
-                            self.hydro_data['water_level'][:, -1],
-                            color='lightgray', alpha=0.3)
-            ax2.fill_between(self.hydro_data['X'][0, :], -td,
-                            self.hydro_data['water_level'][:, -1],
-                            color='lightgray', alpha=0.3)
+            # ax1.fill_between(self.hydro_data['X'][0, :], -td,
+            #                 self.hydro_data['water_level'][:, -1],
+            #                 color='lightgray', alpha=0.3)
+            # ax2.fill_between(self.hydro_data['X'][0, :], -td,
+            #                 self.hydro_data['water_level'][:, -1],
+            #                 color='lightgray', alpha=0.3)
             
             # Add quivers
             self._add_quivers(ax1, c_uv, c_vv, self.hydro_data['X'], Y1)
@@ -476,12 +485,13 @@ class RiverTransectPlotter:
         
         mask_right = u_direction > 0
         mask_left = u_direction < 0
+        X_flipped = np.fliplr(X)  # if X is 2D
         
-        ax.quiver(X[0::n, 0::m][mask_right], Y1[0::n, 0::m][mask_right],
+        ax.quiver(X_flipped[0::n, 0::m][mask_right], Y1[0::n, 0::m][mask_right],
                   u_direction[mask_right], v_direction[mask_right],
                   scale=6, scale_units='inches', width=0.002, headwidth=4,
                   color='black', label='Out', zorder=3)
-        ax.quiver(X[0::n, 0::m][mask_left], Y1[0::n, 0::m][mask_left],
+        ax.quiver(X_flipped[0::n, 0::m][mask_left], Y1[0::n, 0::m][mask_left],
                   u_direction[mask_left], v_direction[mask_left],
                   scale=6, scale_units='inches', width=0.002, headwidth=4,
                   color='blue', label='In', zorder=3)
