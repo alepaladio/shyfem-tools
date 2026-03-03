@@ -21,9 +21,10 @@ def example_basic():
     main_folder = '/home/utente/Documenti/climaxpo/po-er_hindcast_202207/po-er_hindcast/sims/202207'
     # varid = 'ts' # ts or hydro
     varid = 'hydro' # ts or hydro
-    sim_name = 'deltapo_ER_202207_ogridNoDRCVmin'
-    # sim_name = 'deltapo_ER_202207_ogridNoDRCVmin_WATEXT_f'
-    filename = f'{sim_name}_{varid}_20220715-20220725.nc'
+    # sim_name = 'deltapo_ER_202207_ogridNoDRCVmin'
+    sim_name = 'deltapo_ER_202207_ogridNoDRCVmin_WATEXT_f'
+    # filename = f'{sim_name}_{varid}_20220715-20220725.nc'
+    filename = f'{sim_name}_{varid}_20220701-20220801.nc'
     output_folder = f'{main_folder}/NC_out/{sim_name}'
     os.makedirs(output_folder, exist_ok=True)
     # deltapo_ER_202207_ogridNoDRCVmin_ts_20220715-20220725.nc

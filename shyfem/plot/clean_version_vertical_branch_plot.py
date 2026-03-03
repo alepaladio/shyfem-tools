@@ -226,6 +226,15 @@ def ts_load_netcdf(dataset_ts, time_units, time_calendar):
 # Read discharge and water level boundary data
 discharge_dates, discharge_values = read_dat_file(
     '/home/utente/Documenti/climaxpo/discharge_po_pontelagoscuro.dat')
+# Add the other discharge branches
+branch_data = {
+    'PoDiPila': {'Qmed': -38.78, 'Qmax': -38.95},
+    'PoDiGoro': {'Qmed': -1.17, 'Qmax': -1.19},
+    'PoDiGnocca': {'Qmed': -9.04, 'Qmax': -9.22},
+    'PoDiTolle': {'Qmed': -4.84, 'Qmax': -5.41},
+    'PoDiMaistra': {'Qmed': -0.40, 'Qmax': -0.51}
+}
+total_qmax = sum(data['Qmax'] for data in branch_data.values())
 
 # Define folder where NC files are
 models = '/home/utente/Documenti/climaxpo/po-er_hindcast_202207/po-er_hindcast/sims/202207/NC_out/deltapo_ER_202207_ogridNoDRCVmin'
@@ -256,16 +265,17 @@ else:
 # dates of interest to be plotted
 dt_fig = ["2022-07-01", "2022-09-01"]
 store_swi = np.empty((0,4)) # First column is date, second is length in km, third is lat, fourth is lon
-river_branch = 'PoDiVenezia'
+# river_branch = 'PoDiVenezia'
+river_branch = 'PoDiGoro'
 
 # Max length of the river to be plotted (both for ax1,ax2), and of the Y axis in the discharge plot ax3
 x_fig_lim = 50000
-max_discharge_lim = 750
+max_discharge_lim = 300
 x_lim = [0,x_fig_lim]
 y_lim = [-9.5, 1]
 
 # Set time for the NC files
-time_units = 'hours since 2022-07-15 00:00:00'
+time_units = 'hours since 2022-07-01 00:00:00'
 time_calendar = 'standard'
 
 # Load the NETCDF files for hydro and t/s based on flags
@@ -317,7 +327,7 @@ contour_levels_t = np.array([16,18,20,22,24,26,28,30,32])
 # %%
 
 # Save plots as images
-for ii in range(1, len(t), 1):
+for ii in range(150, len(t), 1):
     c_t = t[ii]
     discharge_index = np.searchsorted(discharge_dates, c_t)
     
@@ -439,14 +449,14 @@ for ii in range(1, len(t), 1):
         mask[np.isnan(c_sal)] = 0
         ax1.contourf(X, Y1, mask, colors='gray', levels=[-0.5, 0.5, 1.5], 
                      alpha=1.0, zorder=1)
-        cbar_s = plt.colorbar(surf_s, ax=ax1, label='Salinity (PSU)')
+        cbar_s = plt.colorbar(surf_s, ax=ax1, fraction=0.1, pad=0.04, label='Salinity (PSU)')
         
         # Temperature plot
         surf_t = ax2.contourf(X, Y1, c_tem, cmap=cmo.thermal, levels=contour_levels_t,
                               vmin=16, vmax=32, zorder=2)
         ax2.contourf(X, Y1, mask, colors='gray', levels=[-0.5, 0.5, 1.5],
                      alpha=1.0, zorder=1)
-        cbar_t = plt.colorbar(surf_t, ax=ax2, label='Temperature (°C)')
+        cbar_t = plt.colorbar(surf_t, ax=ax2, fraction=0.1, pad=0.04, label='Temperature (°C)')
         
         # Add contour lines
         contour_colors_ax1 = ['w', 'w', 'k', 'k', 'k', 'k', 'k', 'k', 'k']
@@ -483,14 +493,14 @@ for ii in range(1, len(t), 1):
         mask[np.isnan(c_sal)] = 0
         ax1.contourf(X, Y1, mask, colors='gray', levels=[-0.5, 0.5, 1.5],
                      alpha=1.0, zorder=1)
-        cbar_s = plt.colorbar(surf_s, ax=ax1, label='Salinity (PSU)')
+        cbar_s = plt.colorbar(surf_s, ax=ax1, fraction=0.1, pad=0.04, label='Salinity (PSU)')
         
         # Temperature plot (middle)
         surf_t = ax2.contourf(X, Y1, c_tem, cmap=cmo.thermal, levels=contour_levels_t,
                               vmin=16, vmax=32, zorder=2)
         ax2.contourf(X, Y1, mask, colors='gray', levels=[-0.5, 0.5, 1.5],
                      alpha=1.0, zorder=1)
-        cbar_t = plt.colorbar(surf_t, ax=ax2, label='Temperature (°C)')
+        cbar_t = plt.colorbar(surf_t, ax=ax2, fraction=0.1, pad=0.04, label='Temperature (°C)')
         
         # Add contour lines
         contour_colors_ax1 = ['w', 'w', 'k', 'k', 'k', 'k', 'k', 'k', 'k']
@@ -535,14 +545,14 @@ for ii in range(1, len(t), 1):
                    color='blue', label='In', zorder=3)
         
         # Quivers on middle plot
-        ax2.quiver(X[0::n, 0::m][mask_right], Y1[0::n, 0::m][mask_right],
-                   u_direction[mask_right], v_direction[mask_right],
-                   scale=6, scale_units='inches', width=0.002, headwidth=4,
-                   color='black', zorder=3)
-        ax2.quiver(X[0::n, 0::m][mask_left], Y1[0::n, 0::m][mask_left],
-                   u_direction[mask_left], v_direction[mask_left],
-                   scale=6, scale_units='inches', width=0.002, headwidth=4,
-                   color='blue', zorder=3)
+        # ax2.quiver(X[0::n, 0::m][mask_right], Y1[0::n, 0::m][mask_right],
+        #            u_direction[mask_right], v_direction[mask_right],
+        #            scale=6, scale_units='inches', width=0.002, headwidth=4,
+        #            color='black', zorder=3)
+        # ax2.quiver(X[0::n, 0::m][mask_left], Y1[0::n, 0::m][mask_left],
+        #            u_direction[mask_left], v_direction[mask_left],
+        #            scale=6, scale_units='inches', width=0.002, headwidth=4,
+        #            color='blue', zorder=3)
         
         # SWI detection for salinity plot
         if 'X_length' in locals() and X_length is not None and col_X is not None:
@@ -623,16 +633,47 @@ for ii in range(1, len(t), 1):
     ax3.plot(discharge_dates, discharge_values, 'k')
     if 0 <= discharge_index < len(discharge_dates):
         ax3.plot(discharge_dates[discharge_index], discharge_values[discharge_index], 'ro')
+        # Add annotation with the discharge value
+        current_value = discharge_values[discharge_index]
+        current_date = discharge_dates[discharge_index]
+        
+        ax3.annotate(f'{current_value:.1f} m³/s',  # Text to display
+                    xy=(current_date, current_value),  # Point to annotate
+                    xytext=(10, 10),  # Offset from the point (x=10, y=10) in points
+                    textcoords='offset points',  # How xytext is interpreted
+                    bbox=dict(boxstyle='round,pad=0.3', facecolor='yellow', alpha=0.7),  # Text box styling
+                    arrowprops=dict(arrowstyle='->', connectionstyle='arc3,rad=0'))  # Arrow styling
     ax3.set_xlim([start_date, end_date])
     ax3.set_ylim([0, max_discharge_lim])
     ax3.set_ylabel('Discharge (m³/s)')
     ax3.grid(True)
+    # Add horizontal lines for each branch's Qmax
+    for branch_name, data in branch_data.items():
+        ax3.axhline(y=abs(data['Qmax']),  # Using abs() if you want positive values
+                    linestyle='--', 
+                    alpha=0.7,
+                    label=f"{branch_name}: {abs(data['Qmax']):.2f}")
+    
+    # Add horizontal line for total Qmax
+    ax3.axhline(y=abs(total_qmax), 
+                linestyle='--', 
+                linewidth=2, 
+                color='k',
+                label=f"Total Qmax: {abs(total_qmax):.2f}")
     
     fig.tight_layout()
+    # Adjust subplot after 
+    pos3 = ax3.get_position()
+    new_width = pos3.width * 0.9
+    new_left = pos3.x0 + (pos3.width - new_width) / 2  # Center the narrower plot
+    ax3.set_position([pos3.x0, pos3.y0, new_width, pos3.height])
+    # Add legend to identify the lines
+    ax3.legend(bbox_to_anchor=(0.90, 1.8), loc='upper left')
     
     # figure_name = os.path.join(folder_name_plots, f'plot_{ii:04d}.png')
     figure_name = os.path.join(folder_name_plots, f'plot_{ii:04d}{suffix}.png')
     print(f"Saving: {figure_name}")
+    # plt.show()
     plt.savefig(figure_name)
     plt.close()
     
