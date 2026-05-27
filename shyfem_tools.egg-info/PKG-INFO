@@ -2,7 +2,7 @@ Metadata-Version: 2.1
 Name: shyfem-tools
 Version: 0.1.0
 Summary: Tools for SHYFEM model post-processing
-Author: Ale Paladio - CNR ISMAR Venezia
+Author: Alejandro Paladio - CNR ISMAR Venezia
 Requires-Python: >=3.7
 Requires-Dist: xarray>=2023.1.0
 Requires-Dist: netcdf4>=1.6.2

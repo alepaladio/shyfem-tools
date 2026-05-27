@@ -7,7 +7,7 @@ from datetime import datetime
 from typing import List, Union, Optional
 
 class SHYWriter:
-    """Writer for SHYFEM tide/observation files"""
+    """Writer for SHYFEM time series files"""
     
     def __init__(self, filename: str, station_name: str, 
                  comment: Optional[str] = None):
@@ -19,16 +19,15 @@ class SHYWriter:
         filename : str
             Output file path
         station_name : str
-            Name of station
+            Name of station or location
         comment : str, optional
             Additional comment for header
         """
         self.filename = filename
         self.station_name = station_name
-        self.comment = comment or "Tidal prediction from harmonics"
+        self.comment = comment
         
-    def write_timeseries(self, times: List[datetime], 
-                         values: List[float]) -> None:
+    def write(self, times: List[datetime], values: List[float]) -> None:
         """
         Write time series to SHYFEM format
         
@@ -41,8 +40,8 @@ class SHYWriter:
         """
         with open(self.filename, 'w') as f:
             f.write(f"# Station: {self.station_name}\n")
-            f.write(f"# {self.comment}\n")
-            f.write("# Format: YYYY-MM-DD::HH:MM:SS\\tvalue\n")
+            if self.comment:
+                f.write(f"# {self.comment}\n")
             
             for t, v in zip(times, values):
                 if not np.isnan(v):
@@ -50,12 +49,11 @@ class SHYWriter:
                     f.write(f"{date_str}\t{v:.3f}\n")
 
 
-# Convenience function
-def write_shy_tide_file(output_file: str, times: List[datetime], 
-                       values: List[float], station_name: str,
-                       comment: Optional[str] = None) -> None:
+def write_shy_file(output_file: str, times: List[datetime], 
+                   values: List[float], station_name: str,
+                   comment: Optional[str] = None) -> None:
     """
-    Convenience function to write SHYFEM tide file
+    Write SHYFEM file
     
     Parameters
     ----------
@@ -66,9 +64,9 @@ def write_shy_tide_file(output_file: str, times: List[datetime],
     values : list of float
         Corresponding values
     station_name : str
-        Name of station
+        Name of station or location
     comment : str, optional
         Additional comment for header
     """
     writer = SHYWriter(output_file, station_name, comment)
-    writer.write_timeseries(times, values)
+    writer.write(times, values)

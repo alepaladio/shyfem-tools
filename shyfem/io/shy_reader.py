@@ -8,7 +8,7 @@ from typing import Tuple, List, Optional, Union
 import re
 
 class SHYReader:
-    """Reader for SHYFEM tide/observation files"""
+    """Reader for SHYFEM time series files"""
     
     def __init__(self, filename: str):
         """
@@ -17,13 +17,13 @@ class SHYReader:
         Parameters
         ----------
         filename : str
-            Path to SHYFEM tide file
+            Path to SHYFEM file
         """
         self.filename = filename
         
-    def read_observations(self) -> Tuple[List[datetime], List[float]]:
+    def read(self) -> Tuple[List[datetime], List[float]]:
         """
-        Read observed sea level data from tide file
+        Read data from SHYFEM file
         
         Returns
         -------
@@ -62,31 +62,30 @@ class SHYReader:
                     
         return dates, values
     
-    def read_station_info(self) -> Optional[str]:
+    def read_header(self) -> Optional[str]:
         """
-        Read station name from header
+        Read first comment line from file
         
         Returns
         -------
         str or None
-            Station name if found
+            First comment line if found
         """
         with open(self.filename, 'r') as f:
             for line in f:
-                if line.startswith('# Station:'):
-                    return line.split(':', 1)[1].strip()
+                if line.startswith('#'):
+                    return line.strip()
         return None
 
 
-# Convenience function
-def read_shy_tide_file(filename: str) -> Tuple[List[datetime], List[float]]:
+def read_shy_file(filename: str) -> Tuple[List[datetime], List[float]]:
     """
-    Convenience function to read SHYFEM tide file
+    Read SHYFEM file
     
     Parameters
     ----------
     filename : str
-        Path to SHYFEM tide file
+        Path to SHYFEM file
     
     Returns
     -------
@@ -94,4 +93,4 @@ def read_shy_tide_file(filename: str) -> Tuple[List[datetime], List[float]]:
         (dates, values) lists of datetime objects and float values
     """
     reader = SHYReader(filename)
-    return reader.read_observations()
+    return reader.read()

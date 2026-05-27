@@ -11,7 +11,7 @@ setup(
         "pandas>=1.3.0",
         "geopy>=2.3.0",
     ],
-    author="Ale Paladio - CNR ISMAR Venezia",
+    author="Alejandro Paladio - CNR ISMAR Venezia",
     description="Tools for SHYFEM model post-processing",
     python_requires=">=3.7",
 )

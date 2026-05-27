@@ -10,11 +10,7 @@ __all__ = [
     'SHYFEMNodeExtractor',
     'extract_river_transect',
         'SHYReader',
-    'read_shy_tide_file',
+    'read_shy_file',
     'SHYWriter',
-    'write_shy_tide_file'
+    'write_shy_file',
 ]
-"""
-Input/Output operations for SHYFEM files
-"""
-
