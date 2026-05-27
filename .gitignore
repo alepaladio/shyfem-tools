@@ -1,0 +1,24 @@
+# Large files and folders
+*.tar.gz
+*.mp4
+*.png
+*.jpg
+*.avi
+*.mov
+*.zip
+*.gz
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Egg info
+*.egg-info/
+
+# Large data files
+*.csv
+*.nc
+*.h5
+
+# Specific folders with many images
+shyfem/plot/Diff_*/
