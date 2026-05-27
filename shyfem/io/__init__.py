@@ -9,4 +9,12 @@ from .nc_node_extractor import SHYFEMNodeExtractor, extract_river_transect
 __all__ = [
     'SHYFEMNodeExtractor',
     'extract_river_transect',
+        'SHYReader',
+    'read_shy_tide_file',
+    'SHYWriter',
+    'write_shy_tide_file'
 ]
+"""
+Input/Output operations for SHYFEM files
+"""
+

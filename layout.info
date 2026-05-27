@@ -5,6 +5,7 @@ shyfem-tools/
 │   │   ├── __init__.py
 │   │   ├── nc_reader.py        # NetCDF file reader
 │   │   ├── shy_reader.py       # SHY file reader
+│   │   ├── shy_writer.py       # SHY file writer
 │   │   └── converters.py       # SHY to NetCDF converters
 │   ├── plot/                   # Visualization tools
 │   │   ├── __init__.py
