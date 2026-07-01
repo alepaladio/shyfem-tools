@@ -4,8 +4,80 @@ Example usage of SHYFEMNodeExtractor with xarray
 
 import os
 from shyfem.io.nc_node_extractor import SHYFEMNodeExtractor, extract_river_transect
+from shyfem.io import extract_transect_from_files, SHYFEMNodeExtractor
 import xarray as xr
 import matplotlib.pyplot as plt
+
+# Example 0: Transect extraction from a shapefile to a netCDF file
+def example_transect_from_shapefile():
+        """Complete workflow: extract transect from GRD, then extract NC data"""
+        # ========== STEP 1: Extract transect nodes from GRD ==========
+        # Input files
+        # GRD_FILE = "/home/utente/Documenti/OMBRES/grid_ff/adri_lags_15mPiles_276714_excluded.grd"
+        GRD_FILE = "/home/utente/Documenti/shyfem_wiki/adriatic_po_2020/grid/def7_geo.grd"
+        SHAPEFILE = "/home/utente/Documenti/OMBRES/QGIS/line_along_adriatic.shp"
+        
+        # Output file (same name as shapefile but .dat)
+        # output_name = os.path.splitext(os.path.basename(SHAPEFILE))[0] + ".dat"
+        output_name = 'line1.dat'
+        DAT_FILE = os.path.join(os.path.dirname(SHAPEFILE), output_name)
+        
+        # Extract transect from GRD
+        transect_df = extract_transect_from_files(
+            grd_file=GRD_FILE,
+            shapefile=SHAPEFILE,
+            output_file=DAT_FILE,
+            buffer_distance=7500,
+            start_point_id=0
+        )
+        
+        if transect_df is None:
+            print("Failed to extract transect")
+            return
+        
+        print(f"Transect extracted: {len(transect_df)} nodes")
+        print(transect_df.head())
+        
+        # ========== STEP 2: Use the transect file with SHYFEMNodeExtractor ==========
+        
+        # Setup for NC extraction
+        main_folder = ''
+        varid = 'hydro'
+        sim_name = ''
+        filename = f'{sim_name}_{varid}.nc'
+        output_folder = f'{main_folder}/NC_out/{sim_name}'
+        os.makedirs(output_folder, exist_ok=True)
+        
+        # Use the DAT file as river_file input
+        riverid = os.path.splitext(os.path.basename(SHAPEFILE))[0]  # Use shapefile name
+        
+        extractor = SHYFEMNodeExtractor(
+            nc_file=f"{main_folder}/{filename}",
+            river_file=DAT_FILE,  # The DAT file we just created
+            output_dir=f"{output_folder}"
+        )
+        
+        # Extract nodes along transect
+        if varid == "ts":
+            variables = ["salinity", "temperature"]
+        else:
+            variables = ["water_level", "u_velocity", "v_velocity"]
+        
+        output_file = extractor.extract_nodes(
+            output_prefix=f"{riverid}",
+            sort_direction="longitude",  # Order based on lon/lat from DAT file
+            save_frequency=1,
+            variables=variables,
+            nc_file_varid=varid
+        )
+        
+        # Load and inspect the extracted data
+        ds_extracted = xr.open_dataset(output_file)
+        print(f"Extracted dataset dimensions: {ds_extracted.dims}")
+        print(f"Variables: {list(ds_extracted.data_vars)}")
+        
+        extractor.close()
+        return ds_extracted
 
 # Example 1: Basic extraction
 def example_basic():
@@ -199,6 +271,9 @@ def example_interactive():
 
 if __name__ == "__main__":
     # Run examples
+    print("Example 0: Transect extraction from shapefile to netCDF")
+    ds = example_transect_from_shapefile()
+
     print("Example 1: Basic extraction")
     ds1 = example_basic()
     

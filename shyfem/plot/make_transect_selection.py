@@ -7,17 +7,13 @@ Reads GRD file, loads transect shapefile, extracts nodes along transect using co
 
 import pandas as pd
 import numpy as np
-import matplotlib
-# matplotlib.use('TkAgg')  # or 'Qt5Agg' for Qt backend
 import matplotlib.pyplot as plt
 from shapely.geometry import Point, LineString, Polygon as ShapelyPolygon
-from shapely.ops import unary_union
 import shapefile
 import math
-import time
 
 class TransectExtractor:
-    def __init__(self, buffer_distance_meters=1350):
+    def __init__(self, buffer_distance_meters=2350):
         """
         Initialize extractor with buffer distance in meters.
         Default buffer: 100 meters (adjust based on your grid resolution)
@@ -259,6 +255,16 @@ class TransectExtractor:
         print(f"Selected {len(selected_points)} points within {buffer_distance_meters}m buffer zone")
         return buffer_polygon, selected_points
     
+    def compute_azimuth(self, cx, cy, sel_x, sel_y):
+        """
+        Computes aimuth from 2 points
+        """
+        dx = sel_x - cx
+        dy = sel_y - cy
+        current_azimuth = math.degrees(math.atan2(dx, dy))
+        current_azimuth = (current_azimuth + 360) % 360
+        return current_azimuth
+    
     def check_azimuth_path(self, original_points, combined_points, tolerance=30):
         """
         Check if combined points follow the same direction as original path.
@@ -293,9 +299,6 @@ class TransectExtractor:
                 print(f"Reordering by distance along original path...")
                 
                 # Reorder by distance along original path
-                from shapely.geometry import LineString
-                from shapely.ops import nearest_points
-                
                 line = LineString(original_points)
                 ordered = []
                 for point in combined_points:
@@ -327,27 +330,24 @@ class TransectExtractor:
         # Convert to numpy array
         points_array = np.array(points)
         
-        plot_check=1
+        plot_check=0
         
-        # # Convert to numpy array for faster calculations
-        # points_array = np.array(points)
-        
-        # if plot_check==1:
-        #     # Plot lines to check that they are going in 1 way
-        #     plt.figure(figsize=(10, 8))
-        #     plt.axis('equal')
-        #     plt.xlabel('Longitude')
-        #     plt.ylabel('Latitude')
-        #     plt.title('Transect Progression')
+        if plot_check==1:
+            # Plot lines to check that they are going in 1 way
+            plt.figure(figsize=(10, 8))
+            plt.axis('equal')
+            plt.xlabel('Longitude')
+            plt.ylabel('Latitude')
+            plt.title('Transect Progression')
             
-        #     # Plot path and current point
-        #     for i in range(len(points_array)):
-        #         # Plot all points up to current (the path so far)
-        #         plt.plot(points_array[:i+1, 0], points_array[:i+1, 1], 'b-', alpha=0.5)
-        #         # Plot current point in red
-        #         plt.plot(points_array[i, 0], points_array[i, 1], 'ro', markersize=10)
-        #         plt.pause(0.005)
-        #         print(i)
+            # Plot path and current point
+            for i in range(len(points_array)):
+                # Plot all points up to current (the path so far)
+                plt.plot(points_array[:i+1, 0], points_array[:i+1, 1], 'b-', alpha=0.5)
+                # Plot current point in red
+                plt.plot(points_array[i, 0], points_array[i, 1], 'ro', markersize=10)
+                plt.pause(0.005)
+                print(i)
         
         # Calculate cumulative distances along the line
         diffs = np.diff(points_array, axis=0)
@@ -380,25 +380,26 @@ class TransectExtractor:
         combined_points = sorted(set(points + densified_points), key=lambda p: p[0])  # If sorted by x
         combined_points_check = self.check_azimuth_path(points_array, combined_points)
         
-        # %%
-        # Plot check
-        # combined_points = np.array(combined_points_check)
-        # if plot_check==1:
-        #     # Plot lines to check that they are going in 1 way
-        #     plt.figure(figsize=(10, 8))
-        #     plt.axis('equal')
-        #     plt.xlabel('Longitude')
-        #     plt.ylabel('Latitude')
-        #     plt.title('Transect Progression')
-            
-        #     # Plot path and current point
-        #     for i in range(len(combined_points)):
-        #         # Plot all points up to current (the path so far)
-        #         plt.plot(combined_points[:i+1, 0], combined_points[:i+1, 1], 'b-', alpha=0.5)
-        #         # Plot current point in red
-        #         plt.plot(combined_points[i, 0], combined_points[i, 1], 'ro', markersize=10)
-        #         plt.pause(0.01)
-        #         print(i)
+        # Checking plots
+        if plot_check==1:
+            # Plot check
+            combined_points = np.array(combined_points_check)
+            if plot_check==1:
+                # Plot lines to check that they are going in 1 way
+                plt.figure(figsize=(10, 8))
+                plt.axis('equal')
+                plt.xlabel('Longitude')
+                plt.ylabel('Latitude')
+                plt.title('Transect Progression')
+                
+                # Plot path and current point
+                for i in range(len(combined_points)):
+                    # Plot all points up to current (the path so far)
+                    plt.plot(combined_points[:i+1, 0], combined_points[:i+1, 1], 'b-', alpha=0.5)
+                    # Plot current point in red
+                    plt.plot(combined_points[i, 0], combined_points[i, 1], 'ro', markersize=10)
+                    plt.pause(0.01)
+                    print(i)
         # %%
         print('finish checking')
         return combined_points_check
@@ -416,228 +417,12 @@ class TransectExtractor:
         circle_lat = cy + radius_deg_lat * np.sin(theta)
         return circle_lon, circle_lat
     
-    # def build_path_from_selected_points(self, start_node, end_node, selected_ids, transect_with_azimuth):
-    #     """
-    #     Build path using only points within the buffer zone.
-    #     Uses connectivity with angle-based selection.
-        
-    #     Args:
-    #         start_node: point_id of start point
-    #         end_node: point_id of end point  
-    #         selected_ids: list of dictionaries with point_id, x, y, position_along_transect, 
-    #                      distance_from_line_meters, distance_from_start_meters
-    #         transect_with_azimuth: array with [x, y, azimuth_deg] for densified transect
-    #     """
-    #     checking=1
-    #     # Quick return if start equals end
-    #     if start_node == end_node:
-    #         return [start_node]
-        
-    #     # Convert to dict for fast lookup by point_id
-    #     points_dict = {p['point_id']: p for p in selected_ids}
-        
-    #     # Validate start and end nodes
-    #     if start_node not in points_dict:
-    #         print(f"ERROR: Start node {start_node} not found in selected points")
-    #         return []
-    #     if end_node not in points_dict:
-    #         print(f"ERROR: End node {end_node} not found in selected points")
-    #         return []
-        
-    #     # Get start and end positions
-    #     start_pos = points_dict[start_node]
-    #     end_pos = points_dict[end_node]
-        
-    #     # Build path
-    #     path = [start_node]
-    #     visited = {start_node}
-    #     current_node = start_node
-    #     current_pos = start_pos
-        
-    #     max_iterations = 5
-    #     iterations = 0
-        
-    #     while iterations < max_iterations and current_node != end_node:
-    #         iterations += 1
-    #         # Get current point coordinates
-    #         cx = points_dict[current_node]['x']
-    #         cy = points_dict[current_node]['y']
-            
-    #         # Step 1: Get available nodes from adjacency that are in selected_ids
-    #         connected_nodes = self.node_adjacency.get(current_node, [])
-    #         available = [n for n in connected_nodes if n in points_dict and n not in visited]
-            
-    #         if not available:
-    #             print(f"WARNING: No available nodes from {current_node}, backtracking...")
-    #             if len(path) > 1:
-    #                 path.pop()
-    #                 current_node = path[-1]
-    #                 current_pos = points_dict[current_node]
-    #                 continue
-    #             break
-            
-    #         # Step 2: Calculate distances and azimuths to all available nodes
-    #         candidates = []
-    #         for node_id in available:
-    #             node_pos = points_dict[node_id]
-                
-    #             # Calculate distance
-    #             dist = self._calculate_distance(
-    #                 current_pos['x'], current_pos['y'],
-    #                 node_pos['x'], node_pos['y']
-    #             )
-                
-    #             # Calculate azimuth from current to candidate
-    #             dx = node_pos['x'] - current_pos['x']
-    #             dy = node_pos['y'] - current_pos['y']
-    #             azimuth = math.atan2(dx, dy)  # In radians
-    #             azimuth_deg = math.degrees(azimuth)  # In degrees
-    #             azimuth_deg = (azimuth_deg + 360) % 360  # 0-360
-                
-    #             candidates.append({
-    #                 'point_id': node_id,
-    #                 'x': node_pos['x'],
-    #                 'y': node_pos['y'],
-    #                 'distance': dist,
-    #                 'position_along_transect': node_pos['position_along_transect'],
-    #                 'azimuth_deg': azimuth_deg
-    #             })
-            
-    #         # Step 3: Find max_distance from available nodes
-    #         max_distance = max([c['distance'] for c in candidates]) if candidates else 0
-            
-    #         # Step 4: Find current position on transect and create left_transect
-    #         # Project current position onto transect to find closest point
-    #         transect_array = np.array(transect_with_azimuth)
-    #         transect_xy = transect_array[:, :2]  # x, y columns
-            
-    #         # Option: in_circle=0 for points inside circle, in_circle=1 for points after circle
-    #         in_circle = 0  # 0 = select points inside circle, 1 = select points after circle
-            
-    #         # Step 1: Get all points on transect that are within max_distance from current position
-    #         circle_points = []
-    #         for i in range(len(transect_array)):
-    #             tx, ty, taz = transect_array[i]
-    #             dist_to_current = self._calculate_distance(cx, cy, tx, ty)
-    #             if dist_to_current <= max_distance:
-    #                 circle_points.append({
-    #                     'x': tx,
-    #                     'y': ty,
-    #                     'azimuth_deg': taz,
-    #                     'distance_from_current': dist_to_current,
-    #                     'index': i
-    #                 })
-            
-    #         if not circle_points:
-    #             print(f"WARNING: No transect points within max_distance circle")
-    #             # Fallback: pick closest candidate
-    #             best_candidate = min(candidates, key=lambda c: c['distance'])
-    #             path.append(best_candidate['point_id'])
-    #             visited.add(best_candidate['point_id'])
-    #             current_node = best_candidate['point_id']
-    #             current_pos = points_dict[current_node]
-    #             continue
-            
-    #         # Step 2: Get the index range of transect points within the circle
-    #         min_idx = min([p['index'] for p in circle_points])
-    #         max_idx = max([p['index'] for p in circle_points])
-            
-    #         if in_circle == 0:
-    #             # Option 0: Use the last point inside the circle (before exiting)
-    #             # This ensures we're still inside the circle for angle computation
-    #             selected_transect_idx = max_idx
-    #             print(f"DEBUG: Using last point inside circle (index {selected_transect_idx})")
-    #         else:
-    #             # Option 1: Use the first point after the circle
-    #             selected_transect_idx = max_idx + 1
-    #             if selected_transect_idx >= len(transect_array):
-    #                 selected_transect_idx = max_idx  # Fallback
-    #             print(f"DEBUG: Using first point after circle (index {selected_transect_idx})")
-            
-    #         # Step 3: Get selected transect point
-    #         selected_tx, selected_ty, selected_taz = transect_array[selected_transect_idx]
-            
-    #         # Step 4: Create left_transect with points from selected transect point onward
-    #         left_transect = []
-    #         for i in range(selected_transect_idx, len(transect_array)):
-    #             tx, ty, taz = transect_array[i]
-    #             dist_to_current = self._calculate_distance(cx, cy, tx, ty)
-    #             left_transect.append({
-    #                 'x': tx,
-    #                 'y': ty,
-    #                 'azimuth_deg': taz,
-    #                 'distance_from_current': dist_to_current
-    #             })
-            
-    #         # Step 5: Compute current_azimuth from current position to selected transect point
-    #         dx = selected_tx - cx
-    #         dy = selected_ty - cy
-    #         current_azimuth = math.degrees(math.atan2(dx, dy))
-    #         current_azimuth = (current_azimuth + 360) % 360
-            
-    #         # Step 6: Select candidate with azimuth closest to current_azimuth
-    #         best_candidate = None
-    #         best_angle_diff = float('inf')
-            
-    #         print([c['point_id'] for c in candidates])
-    #         for candidate in candidates:
-    #             # Compute absolute angle difference (0-180)
-    #             angle_diff = abs(candidate['azimuth_deg'] - current_azimuth)
-    #             angle_diff = min(angle_diff, 360 - angle_diff)
-                
-    #             if angle_diff < best_angle_diff:
-    #                 best_angle_diff = angle_diff
-    #                 best_candidate = candidate
-            
-    #         if best_candidate is None:
-    #             print(f"WARNING: No candidate selected for current node {current_node}")
-    #             if len(path) > 1:
-    #                 path.pop()
-    #                 current_node = path[-1]
-    #                 current_pos = points_dict[current_node]
-    #                 continue
-    #             break
-            
-    #         # Add best candidate to path
-    #         path.append(best_candidate['point_id'])
-    #         visited.add(best_candidate['point_id'])
-    #         current_node = best_candidate['point_id']
-    #         current_pos = points_dict[current_node]
-    #         # %%
-    #         if checking==1:
-    #             # Plot check
-    #             plt.plot(transect_xy[:,0],transect_xy[:,1],'k')
-    #             plt.scatter(transect_xy[:,0],transect_xy[:,1], marker='x', s=10)
-                
-    #             circle_lon, circle_lat = self.get_radius_circle(cx, cy, max_distance)
-    #             plt.plot(circle_lon, circle_lat, 'g--', linewidth=2, alpha=0.8, label='Search circle', zorder=3)
-                
-    #             plt.arrow(cx, cy, left_transect[1]['x'] - cx, left_transect[1]['y'] - cy, 
-    #                       head_width=0.005, head_length=0.01, fc='red', ec='red')
-                
-    #             x_left = [p['x'] for p in left_transect]
-    #             y_left = [p['y'] for p in left_transect]
-    #             plt.scatter(x_left,y_left, color='r', marker='s', s=20)
-                
-    #             plt.axis('equal')
-    #             plt.xlim(12.90,13.10)
-    #             plt.ylim(43.80,44.00)
-    #         # Progress report
-            
-    #         if iterations % 100 == 0:
-    #             print(f"DEBUG: Step {iterations}, Node {current_node}, "
-    #                   f"Distance to end: {self._calculate_distance(current_pos['x'], current_pos['y'], end_pos['x'], end_pos['y']):.2f}m")
-        
-    #     print(f"Path built with {len(path)} nodes after {iterations} iterations")
-    #     return path
-    
     def build_path_from_selected_points(self, start_node, end_node, selected_ids, transect_with_azimuth):
         """
         Build path using only points within the buffer zone.
         Uses connectivity with angle-based selection.
         """
-        import math
-        import numpy as np
+        plot_check=0
         
         # Quick return if start equals end
         if start_node == end_node:
@@ -672,12 +457,21 @@ class TransectExtractor:
         max_iterations = len(selected_ids) * 2
         iterations = 0
         
-        # Option: 0 = use last point inside circle, 1 = use first point after circle
-        in_circle = 0
-        
+        # Start loop, 
+        # 1. get current coordinates (cx,cy), 
+        # 2. from candidates compute distance and azimuth from current coordinates
+        # 2.1 get candidate position, avoid previous visited, check if end node is here to close path
+        # 3. Compute max_distance from (cx,cy) to all available candidates
+        # 4. For (cx,cy) to max_distance circle, get possible transect_xy
+        # 4.1 Always from inside this circle, get the last node, and compute azimuth and distance
+        # 5. From selected piece of transect, always use last point inside circle
+        # 6. Compute azimuth from selected transect INSIDE the current circle
+        # 7. select the best node based on all candidates azimuth vs current azimuth (from current transect).
+        # 8. Add best candidate to path. 
         while iterations < max_iterations and current_node != end_node:
             iterations += 1
-            
+            if iterations==50:
+                print(iterations)
             # Get current coordinates
             cx = current_pos['x']
             cy = current_pos['y']
@@ -749,16 +543,34 @@ class TransectExtractor:
                 current_node = best_candidate['point_id']
                 current_pos = points_dict[current_node]
                 continue
-            
+            # %%
+            # Plot check see available points from transect, in circle from nodes
+            if plot_check==1:
+                # Plot available nodes
+                x_selt = [p['x'] for p in selected_ids]
+                y_selt = [p['y'] for p in selected_ids]
+                plt.scatter(x_selt,y_selt,color='lightgray',marker='x',s=20)
+                # Plot current node 
+                plt.plot(cx, cy, 'or')
+                # Plot corresponding circle
+                circle_lon, circle_lat = self.get_radius_circle(cx, cy, max_distance)
+                plt.plot(circle_lon, circle_lat, 'g--', linewidth=2, alpha=0.8, label='Search circle', zorder=3)
+                # Plot transect nodes that fall in circle
+                x_c_trans = [transect_array[p['index']][0] for p in circle_points]
+                y_c_trans = [transect_array[p['index']][1] for p in circle_points]
+                plt.plot(x_c_trans,y_c_trans, 'xr')
+                
+                plt.axis('equal')
+                plt.xlim(12.90,13.10)
+                plt.ylim(43.80,44.00)
+            # %%
             # Step 5: Select transect index (inside or after circle)
             max_idx = max([p['index'] for p in circle_points])
+            # Select always last point inside circle, which in this case is the fartest point.
+            selected_idx = max_idx  
             
-            if in_circle == 0:
-                selected_idx = max_idx  # Last point inside circle
-            else:
-                selected_idx = min(max_idx + 1, len(transect_array) - 1)  # First after circle
-            
-            # Step 6: Get selected transect point and compute current azimuth
+            # Step 6: Get selected transect point (transect_array is always from start to end)
+            # and compute current azimuth
             selected_tx, selected_ty, _ = transect_array[selected_idx]
             
             dx = selected_tx - cx
@@ -769,7 +581,7 @@ class TransectExtractor:
             # Step 7: Select candidate with azimuth closest to current_azimuth
             best_candidate = None
             best_angle_diff = float('inf')
-            
+            # nodes azimuth is in candidates, current transect azimuth is in current_azimuth
             for candidate in candidates:
                 angle_diff = abs(candidate['azimuth_deg'] - current_azimuth)
                 angle_diff = min(angle_diff, 360 - angle_diff)
@@ -792,19 +604,32 @@ class TransectExtractor:
             visited.add(best_candidate['point_id'])
             current_node = best_candidate['point_id']
             current_pos = points_dict[current_node]
-            
             # %%
-            # Plot check
-            plt.plot(transect_xy[:,0],transect_xy[:,1],'k')
-            plt.scatter(transect_xy[:,0],transect_xy[:,1], marker='x', s=10)
-            
-            circle_lon, circle_lat = self.get_radius_circle(cx, cy, max_distance)
-            plt.plot(circle_lon, circle_lat, 'g--', linewidth=2, alpha=0.8, label='Search circle', zorder=3)
-            
-            plt.axis('equal')
-            plt.xlim(12.90,13.10)
-            plt.ylim(43.80,44.00)
-            
+            # Visually check circles
+            if plot_check==1:
+                # Plot available nodes
+                x_selt = [p['x'] for p in selected_ids]
+                y_selt = [p['y'] for p in selected_ids]
+                plt.scatter(x_selt,y_selt,color='lightgray',marker='x',s=20)
+                # Plot current node 
+                plt.plot(cx, cy, 'or')
+                # Plot Transect up to now
+                points_lookup = {p['point_id']: (p['x'], p['y']) for p in selected_ids}
+                # x_c_path = {p['point_id']: (p['x']) for p in selected_ids}
+                x_c_path = [points_lookup[pid][0] for pid in path]
+                y_c_path = [points_lookup[pid][1] for pid in path]
+                plt.plot(x_c_path, y_c_path,'--b')
+                # Plot transect
+                plt.plot(transect_xy[:,0],transect_xy[:,1],'k')
+                plt.scatter(transect_xy[:,0],transect_xy[:,1], marker='x', s=10)
+                
+                circle_lon, circle_lat = self.get_radius_circle(cx, cy, max_distance)
+                plt.plot(circle_lon, circle_lat, 'g--', linewidth=2, alpha=0.8, label='Search circle', zorder=3)
+                
+                plt.axis('equal')
+                plt.xlim(12.90,13.10)
+                plt.ylim(43.80,44.00)
+            # %%
             # Optional: plot progress
             if iterations % 50 == 0:
                 print(f"Step {iterations}: Node {current_node}, "
@@ -832,7 +657,6 @@ class TransectExtractor:
         # it adds the current used defined and a 1000 more points.
         transect_line = self.densify_line(transect_points, num_segments=1500)
         transect_array = np.array(transect_line)
-        # %%
         # %%
         # Compute azimuth for each point (bearing from previous to current)
         dx = np.diff(transect_array[:, 0])  # Longitude differences
