@@ -14,7 +14,8 @@ def example_transect_from_shapefile():
         # ========== STEP 1: Extract transect nodes from GRD ==========
         # Input files
         # GRD_FILE = "/home/utente/Documenti/OMBRES/grid_ff/adri_lags_15mPiles_276714_excluded.grd"
-        GRD_FILE = "/home/utente/Documenti/shyfem_wiki/adriatic_po_2020/grid/def7_geo.grd"
+        GRD_FILE = "./example_files/def7_geo.grd"
+        # SHAPEFILE = "./example_files/line_along_adriatic.shp"
         SHAPEFILE = "/home/utente/Documenti/OMBRES/QGIS/line_along_adriatic.shp"
         
         # Output file (same name as shapefile but .dat)
@@ -41,42 +42,43 @@ def example_transect_from_shapefile():
         # ========== STEP 2: Use the transect file with SHYFEMNodeExtractor ==========
         
         # Setup for NC extraction
-        main_folder = ''
+        main_folder = '/home/utente/Documenti/shyfem_wiki/adriatic_po_2020/sims'
         varid = 'hydro'
-        sim_name = ''
+        sim_name = 'adrpo_nov_2020'
         filename = f'{sim_name}_{varid}.nc'
         output_folder = f'{main_folder}/NC_out/{sim_name}'
         os.makedirs(output_folder, exist_ok=True)
         
         # Use the DAT file as river_file input
-        riverid = os.path.splitext(os.path.basename(SHAPEFILE))[0]  # Use shapefile name
+        riverid = output_name #os.path.splitext(os.path.basename(SHAPEFILE))[0]  # Use shapefile name
         
-        extractor = SHYFEMNodeExtractor(
-            nc_file=f"{main_folder}/{filename}",
-            river_file=DAT_FILE,  # The DAT file we just created
-            output_dir=f"{output_folder}"
-        )
+        # Loop through both varids
+        for varid in ["hydro", "ts"]:
+            filename = f'{sim_name}_{varid}.nc'
+            
+            extractor = SHYFEMNodeExtractor(
+                nc_file=f"{main_folder}/{filename}",
+                river_file=DAT_FILE,
+                output_dir=f"{output_folder}"
+            )
+            
+            if varid == "ts":
+                variables = ["salinity", "temperature"]
+            else:
+                variables = ["water_level", "u_velocity", "v_velocity"]
+            
+            output_file = extractor.extract_nodes(
+                output_prefix=f"{riverid}",
+                sort_direction="longitude",
+                save_frequency=1,
+                variables=variables,
+                nc_file_varid=varid
+            )
+            
+            ds_extracted = xr.open_dataset(output_file)
+            print(f"{varid} extracted: {list(ds_extracted.data_vars)}")
+            extractor.close()
         
-        # Extract nodes along transect
-        if varid == "ts":
-            variables = ["salinity", "temperature"]
-        else:
-            variables = ["water_level", "u_velocity", "v_velocity"]
-        
-        output_file = extractor.extract_nodes(
-            output_prefix=f"{riverid}",
-            sort_direction="longitude",  # Order based on lon/lat from DAT file
-            save_frequency=1,
-            variables=variables,
-            nc_file_varid=varid
-        )
-        
-        # Load and inspect the extracted data
-        ds_extracted = xr.open_dataset(output_file)
-        print(f"Extracted dataset dimensions: {ds_extracted.dims}")
-        print(f"Variables: {list(ds_extracted.data_vars)}")
-        
-        extractor.close()
         return ds_extracted
 
 # Example 1: Basic extraction

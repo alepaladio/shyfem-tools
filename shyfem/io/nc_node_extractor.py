@@ -157,22 +157,23 @@ class SHYFEMNodeExtractor:
         # Extract arrays
         #river_x = river_sorted['latitude'].values   # Lat values
         #river_y = river_sorted['longitude'].values  # Lon values
-	river_x = river_sorted['latitude'].tolist()   # Lat values
-	river_y = river_sorted['longitude'].tolist()  # Lon values
+        river_x = river_sorted['latitude'].tolist()   # Lat values
+        river_y = river_sorted['longitude'].tolist()  # Lon values
         
         # Get node IDs if they exist, otherwise use index
-        #if 'node_id' in river_sorted.columns:
-        #    river_n = river_sorted['node_id'].values
-        #elif 'Node' in river_sorted.columns:
-        #    river_n = river_sorted['Node'].values
-        #else:
-        #    river_n = river_sorted.index.values
-	if 'node_id' in river_sorted.columns:
-	    river_n = river_sorted['node_id'].tolist()
-	elif 'Node' in river_sorted.columns:
-	    river_n = river_sorted['Node'].tolist()
-	else:
-	    river_n = river_sorted.index.tolist()       
+        if 'node_id' in river_sorted.columns:
+            river_n = river_sorted['node_id'].values
+        elif 'Node' in river_sorted.columns:
+            river_n = river_sorted['Node'].values
+        else:
+            river_n = river_sorted.index.values
+        
+        # if 'node_id' in river_sorted.columns:
+        # 	    river_n = river_sorted['node_id'].tolist()
+        # elif 'Node' in river_sorted.columns:
+        # 	    river_n = river_sorted['Node'].tolist()
+        # else:
+        # 	    river_n = river_sorted.index.tolist()       
  
         # Reorder nodes based on distance
         for ii in range(len(river_n) - 1):
@@ -220,7 +221,8 @@ class SHYFEMNodeExtractor:
         
         # Add node IDs if available
         if 'node_id' in river_sorted.columns or 'Node' in river_sorted.columns:
-            result_df['node_id'] = river_n[:,0]
+            # result_df['node_id'] = river_n.tolist()
+            result_df['node_id'] = river_n
         
         return result_df
     
