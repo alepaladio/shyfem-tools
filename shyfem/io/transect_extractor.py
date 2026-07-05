@@ -31,6 +31,7 @@ class TransectExtractor:
         self.points = {}
         self.elements = []
         self.point_coords = {}
+        self.point_depths = {}
         self.node_adjacency = {}
         self.path_df = None
         
@@ -57,7 +58,7 @@ class TransectExtractor:
                     x = float(parts[3])
                     y = float(parts[4])
                     z = float(parts[5]) if len(parts) >= 6 else 0.0
-                    points[point_id] = (x, y, point_type, z)
+                    points[point_id] = {'x': x, 'y': y, 'type': point_type, 'depth': z}
                 
                 # Parse elements (type 2)
                 elif len(parts) >= 7 and parts[0] == '2':
@@ -66,11 +67,29 @@ class TransectExtractor:
                     num_points = int(parts[3])
                     node_ids = [int(parts[4]), int(parts[5]), int(parts[6])]
                     depth = float(parts[7]) if len(parts) > 7 else 0.0
-                    elements.append((element_id, element_type, num_points, node_ids, depth))
+                    elements.append({
+                        'id': element_id,
+                        'type': element_type,
+                        'num_points': num_points,
+                        'node_ids': node_ids,
+                        'depth': depth
+                    })
             
             self.points = points
             self.elements = elements
-            self.point_coords = {pid: (x, y) for pid, (x, y, _, _) in points.items()}
+            
+            # Check if points have depth (z) values
+            points_have_depth = any(p['depth'] != 0.0 for p in points.values())
+            
+            # If points don't have depth, interpolate from elements
+            if not points_have_depth and elements:
+                print("Points have no depth, interpolating from elements...")
+                self._interpolate_depth_from_elements()
+            else:
+                print(f"Points already have depth data")
+            
+            self.point_coords = {pid: (p['x'], p['y']) for pid, p in points.items()}
+            self.point_depths = {pid: p['depth'] for pid, p in points.items()}
             
             self._build_adjacency()
             
@@ -81,11 +100,38 @@ class TransectExtractor:
             print(f"Error reading GRD: {e}")
             return False
     
+    def _interpolate_depth_from_elements(self):
+        """
+        Interpolate depth from elements to points.
+        For each point, find the average depth of all elements that contain it.
+        """
+        # Initialize depth accumulator for each point
+        depth_sum = {pid: 0.0 for pid in self.points}
+        depth_count = {pid: 0 for pid in self.points}
+        
+        # For each element, add its depth to each of its nodes
+        for element in self.elements:
+            element_depth = element['depth']
+            for node_id in element['node_ids']:
+                if node_id in depth_sum:
+                    depth_sum[node_id] += element_depth
+                    depth_count[node_id] += 1
+        
+        # Calculate average depth for each point
+        for pid in self.points:
+            if depth_count[pid] > 0:
+                self.points[pid]['depth'] = depth_sum[pid] / depth_count[pid]
+            else:
+                self.points[pid]['depth'] = 0.0
+        
+        print(f"Interpolated depths for {len([p for p in self.points if self.points[p]['depth'] > 0])} points")
+    
     def _build_adjacency(self):
         """Build node adjacency from elements."""
         adjacency = {}
         
-        for _, _, _, node_ids, _ in self.elements:
+        for element in self.elements:
+            node_ids = element['node_ids']
             p1, p2, p3 = node_ids
             
             if p1 not in adjacency:
@@ -488,12 +534,18 @@ class TransectExtractor:
             print("Failed to build path")
             return None
         
-        # Create DataFrame with node, longitude, latitude
+        # Create DataFrame with node, longitude, latitude, depth
         path_coords = []
         for pid in path_nodes:
             if pid in self.point_coords:
                 x, y = self.point_coords[pid]
-                path_coords.append({'node': pid, 'longitude': x, 'latitude': y})
+                depth = self.point_depths.get(pid, 0.0)  # Get depth or default to 0
+                path_coords.append({
+                    'node': pid, 
+                    'longitude': x, 
+                    'latitude': y, 
+                    'depth': depth
+                })
         
         self.path_df = pd.DataFrame(path_coords)
         
@@ -501,12 +553,12 @@ class TransectExtractor:
         return self.path_df
     
     def save_transect_file(self, output_file):
-        """Save transect data to DAT file (CSV format)."""
+        """Save transect data to DAT file (CSV format) with depth."""
         if self.path_df is None or self.path_df.empty:
             print("No transect data to save")
             return False
         
-        # Save with header: node,longitude,latitude
+        # Save with header: node,longitude,latitude,depth
         self.path_df.to_csv(output_file, index=False, sep=',')
         print(f"Saved transect to: {output_file}")
         return True
