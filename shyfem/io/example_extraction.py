@@ -21,7 +21,8 @@ def example_transect_from_shapefile():
         # Output file (same name as shapefile but .dat)
         # output_name = os.path.splitext(os.path.basename(SHAPEFILE))[0] + ".dat"
         output_name = 'line1.dat'
-        DAT_FILE = os.path.join(os.path.dirname(SHAPEFILE), output_name)
+        #DAT_FILE = os.path.join(os.path.dirname(SHAPEFILE), output_name)
+        DAT_FILE = os.path.join("../plot/", output_name)
         
         # Extract transect from GRD
         transect_df = extract_transect_from_files(
@@ -276,16 +277,16 @@ if __name__ == "__main__":
     print("Example 0: Transect extraction from shapefile to netCDF")
     ds = example_transect_from_shapefile()
 
-    print("Example 1: Basic extraction")
-    ds1 = example_basic()
-    
-    print("\nExample 2: Convenience function")
-    output_file = example_convenience()
-    
-    print("\nExample 3: Arbitrary transect")
-    ds3 = example_arbitrary_transect()
-    
-    print("\nExample 4: Batch processing")
-    files = example_batch_processing()
-    
-    print("\nAll examples completed!")
+#    print("Example 1: Basic extraction")
+#    ds1 = example_basic()
+#    
+#    print("\nExample 2: Convenience function")
+#    output_file = example_convenience()
+#    
+#    print("\nExample 3: Arbitrary transect")
+#    ds3 = example_arbitrary_transect()
+#    
+#    print("\nExample 4: Batch processing")
+#    files = example_batch_processing()
+#    
+#    print("\nAll examples completed!")

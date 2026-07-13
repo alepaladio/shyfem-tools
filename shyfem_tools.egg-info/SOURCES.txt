@@ -7,11 +7,16 @@ shyfem/io/nc_node_extractor.py
 shyfem/io/old_nc_node_extractor.py
 shyfem/io/shy_reader.py
 shyfem/io/shy_writer.py
+shyfem/io/transect_extractor.py
 shyfem/plot/__init__.py
+shyfem/plot/check_grd_distances.py
 shyfem/plot/clean_version_vertical_branch_plot.py
+shyfem/plot/example_plotting.py
 shyfem/plot/example_use_branch_vertical_plot.py
+shyfem/plot/make_transect_selection.py
 shyfem/plot/plot_difference_rivers.py
 shyfem/plot/river_plots.py
+shyfem/plot/stand_alone_readGRD_plotTransect.py
 shyfem/plot/utils.py
 shyfem_tools.egg-info/PKG-INFO
 shyfem_tools.egg-info/SOURCES.txt
